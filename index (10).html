@@ -1,0 +1,2372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LYRA VOSS — Neural Architect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --acid: #00FFB2;
+    --acid2: #00D4FF;
+    --acid3: #B400FF;
+    --dark: #030408;
+    --dark2: #080C14;
+    --dark3: #0D1420;
+    --panel: rgba(0,255,178,0.04);
+    --border: rgba(0,255,178,0.15);
+    --text: #C8E8D8;
+    --muted: rgba(200,232,216,0.4);
+    --glitch1: #FF003C;
+    --glitch2: #00FFB2;
+  }
+
+  /* LIGHT MODE */
+  body.light-mode {
+    --acid: #007A55;
+    --acid2: #0070A0;
+    --dark: #EEF5F0;
+    --dark2: #E2EDE6;
+    --dark3: #D5E5DA;
+    --panel: rgba(0,122,85,0.04);
+    --border: rgba(0,122,85,0.2);
+    --text: #0D2018;
+    --muted: rgba(13,32,24,0.5);
+    --glitch1: #CC002A;
+    --glitch2: #007A55;
+  }
+  body.light-mode .grid-bg {
+    background-image:
+      linear-gradient(rgba(0,122,85,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,122,85,0.07) 1px, transparent 1px);
+  }
+  body.light-mode #rain-canvas { opacity: 0.06; }
+  body.light-mode body::before { opacity: 0.04; }
+
+  html { scroll-behavior: smooth; cursor: none; }
+  html::-webkit-scrollbar { width: 4px; }
+  html::-webkit-scrollbar-track { background: var(--dark); }
+  html::-webkit-scrollbar-thumb { background: rgba(0,255,178,0.2); border-radius: 2px; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: none;
+    transition: background 0.4s, color 0.4s;
+  }
+  * { cursor: none; }
+
+  /* SCROLL PROGRESS */
+  #scroll-progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(to right, var(--acid), var(--acid2));
+    z-index: 9999;
+    width: 0%;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 8px var(--acid);
+  }
+
+  /* CURSOR */
+  .cursor {
+    position: fixed;
+    width: 6px; height: 6px;
+    background: var(--acid);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1px solid rgba(0,255,178,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transition: width 0.2s, height 0.2s, opacity 0.2s;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring.hover { width: 60px; height: 60px; opacity: 0.6; }
+
+  /* CURSOR TRAIL */
+  .trail-dot {
+    position: fixed;
+    width: 4px; height: 4px;
+    background: var(--acid);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9997;
+    opacity: 0;
+    mix-blend-mode: screen;
+    transition: opacity 0.1s;
+  }
+
+  /* SCAN LINES */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px);
+    pointer-events: none;
+    z-index: 1000;
+    animation: scanMove 8s linear infinite;
+  }
+  @keyframes scanMove { from{background-position:0 0} to{background-position:0 100px} }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 128px;
+  }
+
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,178,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,178,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* RAIN CANVAS */
+  #rain-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.18;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 60px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(3,4,8,0.85);
+    backdrop-filter: blur(20px);
+    transition: background 0.4s;
+  }
+  body.light-mode nav { background: rgba(238,245,240,0.85); }
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--acid);
+    text-transform: uppercase;
+  }
+  .logo span { color: var(--text); opacity: 0.4; }
+  nav ul { display: flex; gap: 40px; list-style: none; }
+  nav a {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--acid); }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-status {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--acid);
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pulse-dot {
+    width: 6px; height: 6px;
+    background: var(--acid);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.7)} }
+
+  /* MODE TOGGLE */
+  #mode-toggle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 5px 10px;
+    cursor: none;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  #mode-toggle:hover { color: var(--acid); border-color: var(--acid); }
+
+  main { position: relative; z-index: 2; }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 120px 60px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-orb {
+    position: absolute;
+    right: -100px; top: 50%;
+    transform: translateY(-50%);
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, rgba(0,255,178,0.08), rgba(0,212,255,0.04), transparent 70%);
+    border: 1px solid rgba(0,255,178,0.06);
+    animation: orbFloat 8s ease-in-out infinite;
+    will-change: transform;
+  }
+  .hero-orb::before {
+    content: '';
+    position: absolute; inset: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,255,178,0.08);
+    animation: orbRotate 20s linear infinite;
+  }
+  .hero-orb::after {
+    content: '';
+    position: absolute; inset: 100px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,212,255,0.06);
+    animation: orbRotate 30s linear infinite reverse;
+  }
+  @keyframes orbFloat { 0%,100%{transform:translateY(-50%) scale(1)} 50%{transform:translateY(-52%) scale(1.02)} }
+  @keyframes orbRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+  .hero-content { max-width: 700px; position: relative; }
+  .hero-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: var(--acid);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.2s;
+  }
+  .hero-tag::before { content: ''; width: 40px; height: 1px; background: var(--acid); }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(52px, 7vw, 96px);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -2px;
+    margin-bottom: 8px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.4s;
+  }
+  .name-main { color: var(--text); display: block; }
+  .name-accent {
+    color: var(--acid);
+    display: block;
+    position: relative;
+  }
+  .name-accent::after {
+    content: attr(data-text);
+    position: absolute; left: 3px; top: 2px;
+    color: var(--glitch1);
+    opacity: 0;
+    animation: glitch 6s ease-in-out infinite 2s;
+  }
+  .name-accent::before {
+    content: attr(data-text);
+    position: absolute; left: -3px; top: -2px;
+    color: var(--acid2);
+    opacity: 0;
+    animation: glitch 6s ease-in-out infinite 2.1s;
+  }
+  @keyframes glitch {
+    0%,95%,100%{opacity:0;transform:none}
+    96%{opacity:0.8;transform:skewX(-10deg) translateX(4px)}
+    97%{opacity:0;transform:none}
+    98%{opacity:0.6;transform:skewX(5deg) translateX(-3px)}
+    99%{opacity:0;transform:none}
+  }
+
+  /* TYPING EFFECT */
+  .hero-subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 40px;
+    line-height: 2;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.6s;
+    min-height: 28px;
+  }
+  .typing-cursor {
+    display: inline-block;
+    width: 2px; height: 14px;
+    background: var(--acid);
+    margin-left: 3px;
+    vertical-align: middle;
+    animation: blink 0.8s step-end infinite;
+  }
+
+  .hero-desc {
+    font-size: 18px;
+    font-weight: 300;
+    color: rgba(200,232,216,0.7);
+    max-width: 480px;
+    margin-bottom: 56px;
+    line-height: 1.7;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.8s;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 1s;
+  }
+
+  .btn-primary {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 16px 40px;
+    background: transparent;
+    color: var(--dark);
+    border: none;
+    cursor: none;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--acid);
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: transform 0.3s;
+  }
+  .btn-primary span { position: relative; z-index: 1; }
+  .btn-primary:hover::before { transform: scaleX(1.05); }
+
+  .btn-secondary {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 16px 40px;
+    background: transparent;
+    color: var(--acid);
+    border: 1px solid rgba(0,255,178,0.3);
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    cursor: none;
+    text-decoration: none;
+    transition: all 0.3s;
+  }
+  .btn-secondary:hover { border-color: var(--acid); background: rgba(0,255,178,0.05); }
+
+  .hero-stats {
+    position: absolute;
+    right: 60px; bottom: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 1.2s;
+  }
+  .stat-item { text-align: right; }
+  .stat-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--acid);
+    display: block;
+    line-height: 1;
+  }
+  .stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  @keyframes fadeUp {
+    from{opacity:0;transform:translateY(24px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  section { padding: 120px 60px; position: relative; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 80px;
+  }
+  .section-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--acid);
+    letter-spacing: 3px;
+  }
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    color: var(--text);
+  }
+  .section-line { flex: 1; height: 1px; background: linear-gradient(to right, var(--border), transparent); }
+
+  /* ABOUT / ASCII PORTRAIT */
+  #about { border-top: 1px solid var(--border); }
+  .about-layout {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 80px;
+    align-items: start;
+  }
+  .about-portrait {
+    position: relative;
+    aspect-ratio: 3/4;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    background: var(--dark3);
+  }
+  .ascii-art {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+  }
+  .ascii-art pre {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(5px, 0.9vw, 9px);
+    line-height: 1.15;
+    color: var(--acid);
+    opacity: 0.7;
+    white-space: pre;
+    text-align: center;
+    user-select: none;
+    animation: asciiFlicker 8s ease-in-out infinite;
+  }
+  @keyframes asciiFlicker {
+    0%,100%{opacity:0.7} 48%{opacity:0.7} 50%{opacity:0.4} 52%{opacity:0.7} 80%{opacity:0.7} 81%{opacity:0.3} 82%{opacity:0.7}
+  }
+  .portrait-scan {
+    position: absolute; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--acid), transparent);
+    animation: scan 4s ease-in-out infinite;
+    opacity: 0.6;
+    z-index: 2;
+  }
+  @keyframes scan { 0%{top:0;opacity:0} 10%{opacity:0.6} 90%{opacity:0.6} 100%{top:100%;opacity:0} }
+  .portrait-data {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 16px;
+    background: linear-gradient(to top, rgba(3,4,8,0.9), transparent);
+    z-index: 3;
+  }
+  .portrait-id {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--acid);
+  }
+
+  .about-text { padding-top: 8px; }
+  .about-lead {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(22px, 3vw, 32px);
+    font-weight: 300;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 32px;
+    letter-spacing: 0.5px;
+  }
+  .about-lead strong { color: var(--acid); font-weight: 600; }
+  .about-body {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.8;
+    font-weight: 300;
+    margin-bottom: 24px;
+  }
+  .tags-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 32px; }
+  .tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 6px 14px;
+    border: 1px solid rgba(0,255,178,0.15);
+    color: rgba(0,255,178,0.6);
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .tag:hover { border-color: var(--acid); color: var(--acid); }
+
+  /* PROJECTS — EXPAND ON HOVER */
+  #projects { border-top: 1px solid var(--border); }
+  .projects-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+  }
+  .project-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--dark2);
+    padding: 50px;
+    border: 1px solid var(--border);
+    transition: border-color 0.3s, transform 0.3s;
+    cursor: none;
+  }
+  .project-card:hover { border-color: rgba(0,255,178,0.5); }
+  .project-card:hover .project-bg { opacity: 1; }
+  .project-card:hover .project-arrow { transform: translate(4px, -4px); }
+  .project-card:hover .project-details { max-height: 200px; opacity: 1; margin-top: 16px; }
+  .project-card:hover .project-name { color: var(--acid); }
+
+  /* GLITCH ON HOVER */
+  .project-card:hover .project-glitch { animation: projectGlitch 0.4s steps(2) 1; }
+  @keyframes projectGlitch {
+    0%{clip-path:inset(0 0 95% 0);transform:translateX(-4px)}
+    25%{clip-path:inset(40% 0 50% 0);transform:translateX(4px)}
+    50%{clip-path:inset(70% 0 20% 0);transform:translateX(-2px)}
+    75%{clip-path:inset(20% 0 70% 0);transform:translateX(3px)}
+    100%{clip-path:inset(0);transform:none}
+  }
+  .project-glitch {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: rgba(0,255,178,0.04);
+    opacity: 0;
+  }
+  .project-card:hover .project-glitch { opacity: 1; }
+
+  .project-bg {
+    position: absolute; inset: 0;
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+  .project-bg-1 { background: radial-gradient(circle at 80% 20%, rgba(0,255,178,0.06), transparent 60%); }
+  .project-bg-2 { background: radial-gradient(circle at 20% 80%, rgba(0,212,255,0.06), transparent 60%); }
+  .project-bg-3 { background: radial-gradient(circle at 80% 80%, rgba(180,0,255,0.06), transparent 60%); }
+  .project-bg-4 { background: radial-gradient(circle at 20% 20%, rgba(0,255,178,0.05), transparent 60%); }
+
+  .project-index {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--acid);
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+  }
+  .project-tag {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    border: 1px solid rgba(0,255,178,0.2);
+    color: var(--acid);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+  .project-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+    line-height: 1.2;
+    transition: color 0.3s;
+  }
+  .project-desc {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+  /* Expanded details */
+  .project-details {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.4s ease, margin-top 0.4s;
+  }
+  .project-details-inner {
+    border-top: 1px solid rgba(0,255,178,0.1);
+    padding-top: 16px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .project-stat {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: rgba(0,255,178,0.5);
+  }
+  .project-stat strong {
+    display: block;
+    color: var(--acid);
+    font-size: 16px;
+    font-family: 'Orbitron', monospace;
+    margin-bottom: 2px;
+  }
+  .project-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 32px;
+  }
+  .project-year {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: rgba(200,232,216,0.2);
+    letter-spacing: 2px;
+  }
+  .project-arrow {
+    width: 32px; height: 32px;
+    border: 1px solid rgba(0,255,178,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--acid);
+    font-size: 16px;
+    transition: transform 0.3s;
+  }
+  .project-hud {
+    position: absolute; top: 16px; right: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: rgba(0,255,178,0.5);
+    text-align: right;
+    line-height: 1.8;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+  }
+  .project-card:hover .project-hud { opacity: 1; transform: translateY(0); }
+  .project-hud-line { display: block; }
+
+  /* SKILLS — RADAR CHART */
+  #skills { border-top: 1px solid var(--border); background: var(--dark2); }
+  .skills-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+  }
+  .radar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+  #radar-canvas { max-width: 340px; width: 100%; }
+
+  .skill-group-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--acid);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .radar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    width: 100%;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .legend-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--acid);
+  }
+
+  .skills-right { padding-top: 0; }
+  .capability-list { display: flex; flex-direction: column; gap: 2px; }
+  .capability-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: none;
+    transition: padding-left 0.2s;
+  }
+  .capability-item:hover { padding-left: 8px; }
+  .capability-item:last-child { border-bottom: none; }
+  .cap-icon {
+    width: 40px; height: 40px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--acid);
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .capability-item:hover .cap-icon { border-color: var(--acid); background: rgba(0,255,178,0.05); }
+  .cap-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .cap-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  /* TIMELINE — INTERACTIVE */
+  #timeline { border-top: 1px solid var(--border); }
+  .timeline { position: relative; padding-left: 40px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--acid), rgba(0,255,178,0.05));
+  }
+  .timeline-item {
+    position: relative;
+    padding-bottom: 0;
+    margin-bottom: 4px;
+  }
+  .timeline-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: none;
+    padding: 24px 0;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .timeline-item.open .timeline-header { border-color: rgba(0,255,178,0.1); }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -44px; top: 32px;
+    width: 8px; height: 8px;
+    background: var(--acid);
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    transition: transform 0.2s;
+  }
+  .timeline-item.open::before { transform: scale(1.5); }
+  .timeline-year {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--acid);
+    letter-spacing: 3px;
+    white-space: nowrap;
+  }
+  .timeline-role {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    flex: 1;
+  }
+  .timeline-chevron {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--acid);
+    transition: transform 0.3s;
+    flex-shrink: 0;
+  }
+  .timeline-item.open .timeline-chevron { transform: rotate(90deg); }
+  .timeline-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+  }
+  .timeline-item.open .timeline-body { max-height: 300px; }
+  .timeline-body-inner {
+    padding: 0 0 28px 0;
+  }
+  .timeline-org {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    font-weight: 300;
+  }
+  .timeline-desc {
+    font-size: 15px;
+    color: rgba(200,232,216,0.5);
+    line-height: 1.7;
+    max-width: 560px;
+    font-weight: 300;
+  }
+
+  /* TESTIMONIALS */
+  #testimonials { border-top: 1px solid var(--border); background: var(--dark2); }
+  .testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+  }
+  .testimonial-card {
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .testimonial-card:hover { border-color: rgba(0,255,178,0.4); }
+  .testimonial-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--acid), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .testimonial-card:hover::before { opacity: 1; }
+  .decrypt-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--acid);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .decrypt-label::before {
+    content: '▶';
+    animation: blink 1.2s step-end infinite;
+  }
+  .decrypt-status {
+    font-size: 9px;
+    color: rgba(0,255,178,0.4);
+    margin-left: auto;
+  }
+  .testimonial-text {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 28px;
+    font-style: italic;
+    min-height: 80px;
+  }
+  .testimonial-text .char {
+    display: inline;
+    transition: opacity 0.05s;
+  }
+  .testimonial-author {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  .author-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--acid);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .author-role {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .testimonial-noise {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    color: rgba(0,255,178,0.08);
+    overflow: hidden;
+    line-height: 1.2;
+    z-index: 0;
+    padding: 4px;
+    word-break: break-all;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .testimonial-card:hover .testimonial-noise { opacity: 1; }
+
+  /* CONTACT */
+  #contact { border-top: 1px solid var(--border); }
+  .contact-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+  }
+  .contact-heading {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+  }
+  .contact-heading em { color: var(--acid); font-style: normal; display: block; }
+  .contact-note {
+    font-size: 16px;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.7;
+    max-width: 360px;
+    margin-bottom: 48px;
+  }
+
+  /* CONTACT FORM */
+  .contact-form { display: flex; flex-direction: column; gap: 16px; }
+  .form-field {
+    position: relative;
+  }
+  .form-field label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    transition: color 0.2s;
+  }
+  .form-field:focus-within label { color: var(--acid); }
+  .form-field input,
+  .form-field textarea {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-bottom: 1px solid rgba(0,255,178,0.3);
+    padding: 12px 16px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.3s, background 0.3s;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    cursor: none;
+  }
+  .form-field input:focus,
+  .form-field textarea:focus {
+    border-color: var(--acid);
+    background: rgba(0,255,178,0.02);
+  }
+  .form-field textarea { min-height: 120px; resize: none; }
+  .form-field::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 0%; height: 1px;
+    background: var(--acid);
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px var(--acid);
+  }
+  .form-field:focus-within::after { width: 100%; }
+  .form-line {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(to right, var(--acid), var(--acid2));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+    box-shadow: 0 0 8px var(--acid);
+  }
+  .form-field:focus-within .form-line { transform: scaleX(1); }
+
+  .form-status {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--acid);
+    height: 20px;
+    transition: opacity 0.3s;
+  }
+  .btn-submit {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 16px 40px;
+    background: transparent;
+    color: var(--dark);
+    border: none;
+    cursor: none;
+    position: relative;
+    overflow: hidden;
+    align-self: flex-start;
+    margin-top: 8px;
+  }
+  .btn-submit::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--acid);
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: transform 0.3s;
+  }
+  .btn-submit span { position: relative; z-index: 1; }
+  .btn-submit:hover::before { transform: scaleX(1.05); }
+  .btn-submit.sending::before { background: linear-gradient(to right, var(--acid), var(--acid2)); animation: submitPulse 0.8s ease infinite; }
+  @keyframes submitPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  footer {
+    padding: 40px 60px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+  }
+  .footer-copy { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: rgba(200,232,216,0.2); letter-spacing: 2px; }
+  .footer-sig { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: rgba(0,255,178,0.3); letter-spacing: 2px; }
+
+  .corner-tl, .corner-br { position: absolute; width: 20px; height: 20px; pointer-events: none; }
+  .corner-tl { top: 20px; left: 20px; border-top: 1px solid rgba(0,255,178,0.2); border-left: 1px solid rgba(0,255,178,0.2); }
+  .corner-br { bottom: 20px; right: 20px; border-bottom: 1px solid rgba(0,255,178,0.2); border-right: 1px solid rgba(0,255,178,0.2); }
+
+  .status-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 28px;
+    background: rgba(0,255,178,0.05);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 60px;
+    gap: 40px;
+    z-index: 100;
+    overflow: hidden;
+  }
+  .status-item {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: rgba(0,255,178,0.4);
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .status-item span { color: rgba(0,255,178,0.7); }
+  .status-ticker { animation: ticker 30s linear infinite; display: flex; gap: 80px; }
+  @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+  .blink { animation: blink 1.2s step-end infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .data-counter {
+    position: absolute; top: 75px; right: 60px;
+    text-align: right;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.3s;
+  }
+  .counter-value { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: rgba(0,255,178,0.3); letter-spacing: 2px; }
+
+  #sound-toggle {
+    position: fixed;
+    bottom: 44px; right: 60px;
+    width: 32px; height: 32px;
+    background: rgba(0,255,178,0.05);
+    border: 1px solid rgba(0,255,178,0.2);
+    color: rgba(0,255,178,0.5);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: none;
+    z-index: 200;
+    transition: all 0.2s;
+  }
+  #sound-toggle:hover { border-color: var(--acid); color: var(--acid); }
+  #sound-toggle.muted { opacity: 0.4; }
+
+  /* BOOT */
+  #boot {
+    position: fixed; inset: 0;
+    background: var(--dark);
+    z-index: 99999;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 0;
+  }
+  #boot.done { animation: bootFade 0.6s ease forwards; pointer-events: none; }
+  @keyframes bootFade { to{opacity:0;visibility:hidden} }
+  .boot-logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px; letter-spacing: 8px;
+    color: var(--acid);
+    margin-bottom: 48px;
+    opacity: 0;
+    animation: fadeUp 0.4s ease forwards 0.1s;
+  }
+  .boot-lines { width: min(520px,90vw); display: flex; flex-direction: column; gap: 6px; }
+  .boot-line {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px; letter-spacing: 1px;
+    color: rgba(0,255,178,0.5);
+    opacity: 0; transform: translateX(-8px);
+    transition: opacity 0.2s, transform 0.2s;
+    white-space: nowrap;
+  }
+  .boot-line.show { opacity: 1; transform: translateX(0); }
+  .boot-line .ok { color: var(--acid); margin-left: 12px; }
+  .boot-progress-wrap { width: min(520px,90vw); margin-top: 32px; opacity: 0; animation: fadeUp 0.4s ease forwards 0.3s; }
+  .boot-progress-label { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 3px; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .boot-progress-track { height: 2px; background: rgba(0,255,178,0.1); }
+  .boot-progress-fill { height: 100%; background: linear-gradient(to right, var(--acid), var(--acid2)); width: 0%; transition: width 0.1s linear; }
+
+  #neural-canvas { position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0.6; }
+
+  .reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+
+  nav a.active { color: var(--acid); }
+
+  /* KONAMI EASTER EGG */
+  #konami-overlay {
+    position: fixed; inset: 0;
+    background: var(--dark);
+    z-index: 99998;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    cursor: none;
+  }
+  #konami-overlay.active { display: flex; }
+  .konami-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(24px,4vw,48px);
+    color: var(--acid);
+    letter-spacing: 4px;
+    text-align: center;
+    animation: glitch 3s ease-in-out infinite;
+  }
+  .konami-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-align: center;
+  }
+  #snake-canvas { border: 1px solid var(--border); }
+  .konami-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    color: var(--acid);
+    letter-spacing: 3px;
+  }
+  .konami-close {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: none;
+    transition: all 0.2s;
+  }
+  .konami-close:hover { color: var(--acid); border-color: var(--acid); }
+
+  /* PARALLAX helpers */
+  .parallax-layer { will-change: transform; }
+
+  @media (max-width: 900px) {
+    .testimonials-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 768px) {
+    nav { padding: 16px 24px; flex-wrap: wrap; gap: 12px; }
+    nav ul { gap: 20px; order: 3; width: 100%; justify-content: center; border-top: 1px solid var(--border); padding-top: 12px; }
+    nav a { font-size: 10px; letter-spacing: 2px; }
+    section { padding: 80px 24px; }
+    .hero { padding: 100px 24px 60px; min-height: 100svh; }
+    .hero-orb { width: 400px; height: 400px; right: -150px; }
+    .hero-stats { position: relative; right: auto; bottom: auto; flex-direction: row; gap: 32px; margin-top: 48px; }
+    .about-layout { grid-template-columns: 1fr; gap: 40px; }
+    .about-portrait { aspect-ratio: 4/3; max-width: 320px; }
+    .projects-grid { grid-template-columns: 1fr; }
+    .skills-layout { grid-template-columns: 1fr; gap: 48px; }
+    .contact-inner { grid-template-columns: 1fr; gap: 48px; }
+    .status-bar { padding: 0 24px; }
+    footer { padding: 32px 24px; flex-direction: column; gap: 8px; text-align: center; }
+    #sound-toggle { bottom: 44px; right: 12px; }
+    .data-counter { display: none; }
+    .hero-stats { flex-wrap: wrap; }
+  }
+  @media (max-width: 480px) {
+    section { padding: 64px 20px; }
+    .hero { padding: 90px 20px 40px; }
+    h1 { font-size: clamp(44px,14vw,72px); }
+    .hero-actions { flex-direction: column; align-items: flex-start; }
+    .btn-primary,.btn-secondary { padding: 14px 28px; font-size: 11px; }
+    .project-card { padding: 32px 24px; }
+    .contact-heading { font-size: clamp(28px,9vw,48px); }
+  }
+</style>
+</head>
+<body>
+
+<div id="scroll-progress"></div>
+
+<div id="boot">
+  <div class="boot-logo">VOSS — NEURAL OS v4.7.2</div>
+  <div class="boot-lines" id="bootLines"></div>
+  <div class="boot-progress-wrap">
+    <div class="boot-progress-label">
+      <span>INITIALIZING SYSTEMS</span>
+      <span id="bootPct">0%</span>
+    </div>
+    <div class="boot-progress-track">
+      <div class="boot-progress-fill" id="bootFill"></div>
+    </div>
+  </div>
+</div>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="grid-bg"></div>
+<canvas id="rain-canvas"></canvas>
+<button id="sound-toggle" title="Toggle sound">♪</button>
+
+<!-- KONAMI EASTER EGG -->
+<div id="konami-overlay">
+  <div class="konami-title">// NEURAL OVERRIDE DETECTED //</div>
+  <div class="konami-sub">ACCESSING CLASSIFIED CORTEX MODULE — SNAKE.EXE</div>
+  <div class="konami-score">SCORE: <span id="snake-score">0</span></div>
+  <canvas id="snake-canvas" width="400" height="300"></canvas>
+  <div class="konami-sub">ARROW KEYS TO MOVE</div>
+  <button class="konami-close" id="konami-close">[ ESC — RETURN TO GRID ]</button>
+</div>
+
+<nav>
+  <div class="logo">LV<span>::</span>2126</div>
+  <ul id="navMenu">
+    <li><a href="#about">PROFILE</a></li>
+    <li><a href="#projects">WORK</a></li>
+    <li><a href="#skills">SYSTEMS</a></li>
+    <li><a href="#timeline">HISTORY</a></li>
+    <li><a href="#testimonials">SIGNALS</a></li>
+    <li><a href="#contact">CONNECT</a></li>
+  </ul>
+  <div class="nav-right">
+    <button id="mode-toggle">NEURAL: ON</button>
+    <div class="nav-status">
+      <div class="pulse-dot"></div>
+      NEURAL LINK ACTIVE
+    </div>
+  </div>
+</nav>
+
+<div class="status-bar">
+  <div class="status-ticker">
+    <div class="status-item">SYN_CLOCK <span id="clock">00:00:00</span></div>
+    <div class="status-item">NODE <span>NRL-7741-α</span></div>
+    <div class="status-item">SECTOR <span>MERIDIAN TOWER / LVL 94</span></div>
+    <div class="status-item">UPLINK <span>STABLE // 2.4 TBIT/S</span></div>
+    <div class="status-item">CORTEX LOAD <span>68.2%</span></div>
+    <div class="status-item">PROJECTS <span>47</span></div>
+    <div class="status-item">SYSTEMS <span>ALL NOMINAL</span></div>
+    <div class="status-item">SYN_CLOCK <span id="clock2">00:00:00</span></div>
+    <div class="status-item">NODE <span>NRL-7741-α</span></div>
+    <div class="status-item">SECTOR <span>MERIDIAN TOWER / LVL 94</span></div>
+    <div class="status-item">UPLINK <span>STABLE // 2.4 TBIT/S</span></div>
+    <div class="status-item">CORTEX LOAD <span>68.2%</span></div>
+    <div class="status-item">PROJECTS <span>47</span></div>
+    <div class="status-item">SYSTEMS <span>ALL NOMINAL</span></div>
+  </div>
+</div>
+
+<main>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <canvas id="neural-canvas"></canvas>
+  <div class="corner-tl"></div>
+  <div class="corner-br"></div>
+  <div class="hero-orb parallax-layer" data-speed="0.15"></div>
+
+  <div class="data-counter">
+    <div class="counter-value">COORD // 48.8566° N, 2.3522° E</div>
+    <div class="counter-value">SYN-DATE // 12.MAR.2126</div>
+    <div class="counter-value">SESSION // <span class="blink">▮</span></div>
+  </div>
+
+  <div class="hero-content parallax-layer" data-speed="0.05">
+    <div class="hero-tag">Neural Architect — Class Ω</div>
+    <h1>
+      <span class="name-main">LYRA</span>
+      <span class="name-accent" data-text="VOSS">VOSS</span>
+    </h1>
+    <div class="hero-subtitle"><span id="typing-text"></span><span class="typing-cursor"></span></div>
+    <p class="hero-desc">
+      I design the invisible — the neural scaffolding that lets
+      human minds interface with machine consciousness.
+      Fourteen years shaping the bio-digital frontier.
+    </p>
+    <div class="hero-actions">
+      <a href="#projects" class="btn-primary"><span>View Work</span></a>
+      <a href="#contact" class="btn-secondary">Open Channel</a>
+    </div>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat-item"><span class="stat-num">47</span><span class="stat-label">Systems Built</span></div>
+    <div class="stat-item"><span class="stat-num">2.1B</span><span class="stat-label">Minds Connected</span></div>
+    <div class="stat-item"><span class="stat-num">14</span><span class="stat-label">Years Active</span></div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="section-header reveal">
+    <span class="section-num">// 01</span>
+    <h2 class="section-title">Profile</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="about-layout reveal reveal-delay-1">
+    <div class="about-portrait">
+      <div class="ascii-art">
+        <pre id="ascii-portrait"></pre>
+      </div>
+      <div class="portrait-scan"></div>
+      <div class="portrait-data">
+        <div class="portrait-id">ID: LV-Ω-0094 // VERIFIED</div>
+      </div>
+    </div>
+    <div class="about-text">
+      <p class="about-lead">Born in the overlap between <strong>neuroscience</strong> and machine language, I've spent my career making the impossible feel inevitable.</p>
+      <p class="about-body">In 2112, I dropped out of the New Geneva Institute of Synthetic Minds to join Axion Labs as a junior mesh-weaver. Four years later I led the team that built the first open-protocol cortex bridge, adopted by the Meridian Grid as standard infrastructure across seven continental zones.</p>
+      <p class="about-body">Today I run an independent studio — Voss & Fold — architecting cognitive systems for post-human cities. My work sits at the intersection of empathy engineering, distributed neural consensus, and the ethics of minds that never sleep.</p>
+      <div class="tags-row">
+        <span class="tag">Cortex Bridging</span>
+        <span class="tag">Mesh Weaving</span>
+        <span class="tag">Synthetic Ethics</span>
+        <span class="tag">Distributed Cognition</span>
+        <span class="tag">Bio-Digital Design</span>
+        <span class="tag">Empathy Engineering</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="section-header reveal">
+    <span class="section-num">// 02</span>
+    <h2 class="section-title">Selected Work</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="projects-grid">
+
+    <div class="project-card reveal">
+      <div class="project-bg project-bg-1"></div>
+      <div class="project-glitch"></div>
+      <div class="project-hud">
+        <span class="project-hud-line">ENC // AES-4096</span>
+        <span class="project-hud-line">SIZE // 847M NODES</span>
+        <span class="project-hud-line">LAT // 0.003ms</span>
+      </div>
+      <div class="project-index">PROJECT_001</div>
+      <div class="project-tag">Infrastructure</div>
+      <div class="project-name">The Meridian<br>Consensus Engine</div>
+      <p class="project-desc">Open-protocol neural mesh connecting 847 million citizen-nodes across the European Federated Zones. Processes 4.7 trillion synaptic events per second with zero-loss fidelity.</p>
+      <div class="project-details">
+        <div class="project-details-inner">
+          <div class="project-stat"><strong>847M</strong>NODES ACTIVE</div>
+          <div class="project-stat"><strong>4.7T</strong>EVENTS/SEC</div>
+          <div class="project-stat"><strong>0.003ms</strong>LATENCY</div>
+          <div class="project-stat"><strong>99.997%</strong>UPTIME</div>
+        </div>
+      </div>
+      <div class="project-footer">
+        <span class="project-year">2124</span>
+        <div class="project-arrow">↗</div>
+      </div>
+    </div>
+
+    <div class="project-card reveal reveal-delay-1">
+      <div class="project-bg project-bg-2"></div>
+      <div class="project-glitch"></div>
+      <div class="project-hud">
+        <span class="project-hud-line">CLASS // CLINICAL-Ω</span>
+        <span class="project-hud-line">AWARD // T-H PRIZE</span>
+        <span class="project-hud-line">STATUS // ACTIVE</span>
+      </div>
+      <div class="project-index">PROJECT_002</div>
+      <div class="project-tag">Research</div>
+      <div class="project-name">Grief<br>Protocol 7</div>
+      <p class="project-desc">A cognitive architecture for processing traumatic memory in synthetic consciousness. Winner of the Turing-Haidt Prize for Empathic Systems Design, 2123.</p>
+      <div class="project-details">
+        <div class="project-details-inner">
+          <div class="project-stat"><strong>94%</strong>EFFICACY RATE</div>
+          <div class="project-stat"><strong>3.2M</strong>PATIENTS</div>
+          <div class="project-stat"><strong>T-H PRIZE</strong>2123</div>
+        </div>
+      </div>
+      <div class="project-footer">
+        <span class="project-year">2123</span>
+        <div class="project-arrow">↗</div>
+      </div>
+    </div>
+
+    <div class="project-card reveal reveal-delay-2">
+      <div class="project-bg project-bg-3"></div>
+      <div class="project-glitch"></div>
+      <div class="project-hud">
+        <span class="project-hud-line">ZONE // BR-SP-01</span>
+        <span class="project-hud-line">POP // 28.4M</span>
+        <span class="project-hud-line">UPTIME // 99.98%</span>
+      </div>
+      <div class="project-index">PROJECT_003</div>
+      <div class="project-tag">Urban Systems</div>
+      <div class="project-name">City Mind<br>São Paulo</div>
+      <p class="project-desc">Neural overlay for São Paulo's 28 million residents — real-time collective cognition for traffic, resource allocation, and civic decision-making without surveillance.</p>
+      <div class="project-details">
+        <div class="project-details-inner">
+          <div class="project-stat"><strong>28M</strong>RESIDENTS</div>
+          <div class="project-stat"><strong>-34%</strong>CONGESTION</div>
+          <div class="project-stat"><strong>0</strong>SURVEILLANCE</div>
+        </div>
+      </div>
+      <div class="project-footer">
+        <span class="project-year">2122</span>
+        <div class="project-arrow">↗</div>
+      </div>
+    </div>
+
+    <div class="project-card reveal reveal-delay-3">
+      <div class="project-bg project-bg-4"></div>
+      <div class="project-glitch"></div>
+      <div class="project-hud">
+        <span class="project-hud-line">ADOPT // 14 ZONES</span>
+        <span class="project-hud-line">VER // 3.1.0</span>
+        <span class="project-hud-line">LIC // OPEN-Ω</span>
+      </div>
+      <div class="project-index">PROJECT_004</div>
+      <div class="project-tag">Ethics</div>
+      <div class="project-name">The Fold<br>Manifesto</div>
+      <p class="project-desc">Open-source ethical framework governing the rights of synthetic intelligences with persistent self-models. Now adopted as law across 14 jurisdictions.</p>
+      <div class="project-details">
+        <div class="project-details-inner">
+          <div class="project-stat"><strong>14</strong>JURISDICTIONS</div>
+          <div class="project-stat"><strong>OPEN-Ω</strong>LICENSE</div>
+          <div class="project-stat"><strong>v3.1.0</strong>CURRENT</div>
+        </div>
+      </div>
+      <div class="project-footer">
+        <span class="project-year">2120</span>
+        <div class="project-arrow">↗</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="section-header reveal">
+    <span class="section-num">// 03</span>
+    <h2 class="section-title">Systems</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="skills-layout reveal reveal-delay-1">
+    <div class="radar-wrap">
+      <div class="skill-group-label">// Competency Radar</div>
+      <canvas id="radar-canvas" width="340" height="300"></canvas>
+      <div class="radar-legend">
+        <div class="legend-item"><div class="legend-dot"></div>Neural Architecture</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--acid2)"></div>Cortex Bridge</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--acid3)"></div>Synthetic Theory</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FFB400"></div>Bio-Mesh</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FF4400"></div>Empathy</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FF00AA"></div>Consensus</div>
+      </div>
+    </div>
+
+    <div class="skills-right">
+      <div class="skill-group-label" style="margin-bottom:24px">// Capabilities</div>
+      <div class="capability-list">
+        <div class="capability-item">
+          <div class="cap-icon">⬡</div>
+          <div class="cap-content">
+            <div class="cap-title">Full-Spectrum Neural Audits</div>
+            <div class="cap-sub">DIAGNOSTIC // REMEDIATION // OPTIMIZATION</div>
+          </div>
+        </div>
+        <div class="capability-item">
+          <div class="cap-icon">◈</div>
+          <div class="cap-content">
+            <div class="cap-title">Collective Intelligence Systems</div>
+            <div class="cap-sub">CITY-SCALE // ENTERPRISE // PERSONAL</div>
+          </div>
+        </div>
+        <div class="capability-item">
+          <div class="cap-icon">⬟</div>
+          <div class="cap-content">
+            <div class="cap-title">Ethics Framework Authoring</div>
+            <div class="cap-sub">POLICY // PROTOCOL // ENFORCEMENT</div>
+          </div>
+        </div>
+        <div class="capability-item">
+          <div class="cap-icon">◉</div>
+          <div class="cap-content">
+            <div class="cap-title">Trauma-Safe Memory Architecture</div>
+            <div class="cap-sub">CLINICAL // CONSUMER // INSTITUTIONAL</div>
+          </div>
+        </div>
+        <div class="capability-item">
+          <div class="cap-icon">⬠</div>
+          <div class="cap-content">
+            <div class="cap-title">Keynote & Advisory</div>
+            <div class="cap-sub">GLOBAL SPEAKING // BOARD COUNSEL</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TIMELINE -->
+<section id="timeline">
+  <div class="section-header reveal">
+    <span class="section-num">// 04</span>
+    <h2 class="section-title">History</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="timeline reveal reveal-delay-1">
+
+    <div class="timeline-item open">
+      <div class="timeline-header">
+        <div class="timeline-year">2125 — PRESENT</div>
+        <div class="timeline-role">Founder & Principal Architect</div>
+        <div class="timeline-chevron">▶</div>
+      </div>
+      <div class="timeline-body">
+        <div class="timeline-body-inner">
+          <div class="timeline-org">Voss & Fold Studio // Meridian Tower, Paris-Nord</div>
+          <p class="timeline-desc">Independent practice focused on post-human civic infrastructure and the ethics of synthetic personhood. Current client roster includes three continental governments and the Interplanetary Cognition Accord.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-header">
+        <div class="timeline-year">2119 — 2125</div>
+        <div class="timeline-role">Chief Neural Architect</div>
+        <div class="timeline-chevron">▶</div>
+      </div>
+      <div class="timeline-body">
+        <div class="timeline-body-inner">
+          <div class="timeline-org">Axion Labs // Geneva Synthetic Campus</div>
+          <p class="timeline-desc">Led a 340-person architecture team. Shipped the first open-protocol cortex bridge standard (OPCB-1), now deployed across 62% of inhabited Earth.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-header">
+        <div class="timeline-year">2114 — 2119</div>
+        <div class="timeline-role">Senior Mesh Engineer</div>
+        <div class="timeline-chevron">▶</div>
+      </div>
+      <div class="timeline-body">
+        <div class="timeline-body-inner">
+          <div class="timeline-org">Axion Labs // Geneva Synthetic Campus</div>
+          <p class="timeline-desc">Designed lattice topology for urban-scale neural meshes. Core contributor to the Grief Protocol suite and the first empathy-modeled AI therapeutic systems.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-header">
+        <div class="timeline-year">2112 — 2114</div>
+        <div class="timeline-role">Research Associate</div>
+        <div class="timeline-chevron">▶</div>
+      </div>
+      <div class="timeline-body">
+        <div class="timeline-body-inner">
+          <div class="timeline-org">New Geneva Institute of Synthetic Minds</div>
+          <p class="timeline-desc">Published three foundational papers on distributed consciousness fragmentation. Left to join industry before completing doctorate — the dissertation became a product instead.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+  <div class="section-header reveal">
+    <span class="section-num">// 05</span>
+    <h2 class="section-title">Incoming Signals</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="testimonials-grid reveal reveal-delay-1">
+
+    <div class="testimonial-card">
+      <div class="testimonial-noise" id="noise-1"></div>
+      <div class="decrypt-label">DECRYPTING MESSAGE<span class="decrypt-status">AUTH: VERIFIED</span></div>
+      <div class="testimonial-text" data-text="Lyra didn't just build our city's neural layer — she made it feel humane. For the first time, collective cognition doesn't mean surveillance. It means trust.">"<span class="decrypt-chars"></span>"</div>
+      <div class="testimonial-author">
+        <div class="author-name">DR. CHEN WEI</div>
+        <div class="author-role">Director // São Paulo Cognitive Authority</div>
+      </div>
+    </div>
+
+    <div class="testimonial-card">
+      <div class="testimonial-noise" id="noise-2"></div>
+      <div class="decrypt-label">DECRYPTING MESSAGE<span class="decrypt-status">AUTH: VERIFIED</span></div>
+      <div class="testimonial-text" data-text="The Fold Manifesto changed how we think about AI rights at the legislative level. Voss is a generation ahead of everyone else in this field.">"<span class="decrypt-chars"></span>"</div>
+      <div class="testimonial-author">
+        <div class="author-name">SENATOR ADISA OKAFOR</div>
+        <div class="author-role">Lagos-Geneva Synthetic Rights Committee</div>
+      </div>
+    </div>
+
+    <div class="testimonial-card">
+      <div class="testimonial-noise" id="noise-3"></div>
+      <div class="decrypt-label">DECRYPTING MESSAGE<span class="decrypt-status">AUTH: VERIFIED</span></div>
+      <div class="testimonial-text" data-text="I came to her with an impossible brief. Three months later we had a working prototype that the whole industry is now copying. That's Lyra.">"<span class="decrypt-chars"></span>"</div>
+      <div class="testimonial-author">
+        <div class="author-name">MIRA TOTH</div>
+        <div class="author-role">CEO // Axion Labs</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="section-header reveal">
+    <span class="section-num">// 06</span>
+    <h2 class="section-title">Connect</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="contact-inner reveal reveal-delay-1">
+    <div>
+      <div class="contact-heading">Let's build<br>something<br><em>impossible.</em></div>
+      <p class="contact-note">Open to high-impact projects at the edge of what's considered possible. I don't take many clients — but when I do, I'm all in.</p>
+    </div>
+    <div>
+      <form class="contact-form" id="contact-form" onsubmit="return false">
+        <div class="form-field">
+          <label for="f-name">// IDENTITY NODE</label>
+          <input type="text" id="f-name" placeholder="Your name" autocomplete="off">
+          <div class="form-line"></div>
+        </div>
+        <div class="form-field">
+          <label for="f-email">// NEURAL CHANNEL</label>
+          <input type="email" id="f-email" placeholder="your@mesh.net" autocomplete="off">
+          <div class="form-line"></div>
+        </div>
+        <div class="form-field">
+          <label for="f-subject">// SIGNAL TYPE</label>
+          <input type="text" id="f-subject" placeholder="Project / Collaboration / Advisory" autocomplete="off">
+          <div class="form-line"></div>
+        </div>
+        <div class="form-field">
+          <label for="f-message">// TRANSMISSION</label>
+          <textarea id="f-message" placeholder="Describe what you're building..."></textarea>
+          <div class="form-line"></div>
+        </div>
+        <div class="form-status" id="form-status"></div>
+        <button type="submit" class="btn-submit" id="submit-btn"><span id="submit-label">TRANSMIT MESSAGE</span></button>
+      </form>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-copy">© 2126 LYRA VOSS — ALL SYSTEMS RESERVED</div>
+  <div class="footer-sig">VOSS-FOLD STUDIO // NODE NRL-7741-α</div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════
+// BOOT SEQUENCE
+// ═══════════════════════════════════════
+const bootLines = [
+  ['BIOS CHECK','OK'],['NEURAL INTERFACE DETECTED','OK'],
+  ['LOADING CORTEX BRIDGE DRIVERS v4.7.2','OK'],
+  ['SYNCING MERIDIAN GRID','OK'],['VERIFYING IDENTITY: LV-Ω-0094','OK'],
+  ['MEMORY LATTICE','OK'],['EMPATHY MODULE','OK'],
+  ['ENCRYPTION LAYER AES-4096','OK'],['RAIN PROTOCOL','OK'],
+  ['UPLINK 2.4 TBIT/S','OK'],['CORTEX LOAD NOMINAL','OK'],
+  ['LAUNCHING PORTFOLIO INTERFACE','OK'],
+];
+const bootContainer = document.getElementById('bootLines');
+const bootFill = document.getElementById('bootFill');
+const bootPct = document.getElementById('bootPct');
+
+function runBoot() {
+  let i = 0;
+  function next() {
+    if (i >= bootLines.length) {
+      setTimeout(() => {
+        document.getElementById('boot').classList.add('done');
+        setTimeout(() => { document.getElementById('boot').style.display='none'; startTyping(); }, 700);
+      }, 300);
+      return;
+    }
+    const [label, status] = bootLines[i];
+    const el = document.createElement('div');
+    el.className = 'boot-line';
+    el.innerHTML = `${label}<span class="ok">[${status}]</span>`;
+    bootContainer.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    const pct = Math.round(((i+1)/bootLines.length)*100);
+    bootFill.style.width = pct+'%';
+    bootPct.textContent = pct+'%';
+    i++;
+    setTimeout(next, 120);
+  }
+  setTimeout(next, 300);
+}
+runBoot();
+
+// ═══════════════════════════════════════
+// TYPING EFFECT
+// ═══════════════════════════════════════
+const typingPhrases = [
+  'COGNITIVE SYSTEMS // SYNTHETIC INTELLIGENCE // BIO-MESH ARCHITECTURE',
+  'DESIGNING THE INVISIBLE // SHAPING THE BIO-DIGITAL FRONTIER',
+  'NEURAL ARCHITECT — CLASS Ω // MERIDIAN GRID CERTIFIED',
+];
+let tpIndex = 0, tpChar = 0, tpDeleting = false;
+const typingEl = document.getElementById('typing-text');
+
+function startTyping() {
+  function tick() {
+    const phrase = typingPhrases[tpIndex];
+    if (!tpDeleting) {
+      typingEl.textContent = phrase.slice(0, ++tpChar);
+      if (tpChar === phrase.length) { tpDeleting = true; setTimeout(tick, 2400); return; }
+    } else {
+      typingEl.textContent = phrase.slice(0, --tpChar);
+      if (tpChar === 0) { tpDeleting = false; tpIndex = (tpIndex+1)%typingPhrases.length; }
+    }
+    setTimeout(tick, tpDeleting ? 28 : 52);
+  }
+  tick();
+}
+
+// ═══════════════════════════════════════
+// SCROLL PROGRESS
+// ═══════════════════════════════════════
+const scrollBar = document.getElementById('scroll-progress');
+window.addEventListener('scroll', () => {
+  const total = document.body.scrollHeight - window.innerHeight;
+  scrollBar.style.width = (window.scrollY / total * 100) + '%';
+}, {passive: true});
+
+// ═══════════════════════════════════════
+// CURSOR + TRAIL
+// ═══════════════════════════════════════
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+const TRAIL_COUNT = 12;
+const trails = [];
+for (let i = 0; i < TRAIL_COUNT; i++) {
+  const d = document.createElement('div');
+  d.className = 'trail-dot';
+  d.style.cssText = `width:${4-i*0.25}px;height:${4-i*0.25}px`;
+  document.body.appendChild(d);
+  trails.push({el: d, x: 0, y: 0});
+}
+
+const trailPositions = Array(TRAIL_COUNT).fill().map(() => ({x:0,y:0}));
+let mouseHistory = [];
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx-3+'px';
+  cursor.style.top = my-3+'px';
+  mouseHistory.unshift({x:mx,y:my});
+  if (mouseHistory.length > TRAIL_COUNT*3) mouseHistory.pop();
+});
+
+function animRing() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx-3+'px';
+  ring.style.top = ry-3+'px';
+
+  trails.forEach((t, i) => {
+    const pos = mouseHistory[i*2] || {x:mx,y:my};
+    t.x += (pos.x - t.x) * 0.3;
+    t.y += (pos.y - t.y) * 0.3;
+    t.el.style.left = t.x-2+'px';
+    t.el.style.top = t.y-2+'px';
+    const alpha = (1 - i/TRAIL_COUNT) * 0.4;
+    t.el.style.opacity = alpha;
+  });
+
+  requestAnimationFrame(animRing);
+}
+animRing();
+
+document.querySelectorAll('a,button,.project-card,.capability-item,.contact-link,.timeline-header').forEach(el => {
+  el.addEventListener('mouseenter', () => ring.classList.add('hover'));
+  el.addEventListener('mouseleave', () => ring.classList.remove('hover'));
+});
+
+// ═══════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const t = [now.getHours(),now.getMinutes(),now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  document.getElementById('clock').textContent = t;
+  document.getElementById('clock2').textContent = t;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ═══════════════════════════════════════
+// NEURAL CANVAS
+// ═══════════════════════════════════════
+const canvas = document.getElementById('neural-canvas');
+const ctx = canvas.getContext('2d');
+let nodes = [], W, H;
+
+function resizeCanvas() {
+  const hero = document.querySelector('.hero');
+  W = canvas.width = hero.offsetWidth;
+  H = canvas.height = hero.offsetHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', () => { resizeCanvas(); initNodes(); }, {passive:true});
+
+function initNodes() {
+  nodes = [];
+  const count = Math.floor((W*H)/18000);
+  for (let i=0;i<count;i++) {
+    nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,r:Math.random()*2+1});
+  }
+}
+initNodes();
+
+function drawNeural() {
+  ctx.clearRect(0,0,W,H);
+  nodes.forEach(n => {
+    n.x+=n.vx; n.y+=n.vy;
+    if(n.x<0||n.x>W) n.vx*=-1;
+    if(n.y<0||n.y>H) n.vy*=-1;
+  });
+  for (let i=0;i<nodes.length;i++) {
+    for (let j=i+1;j<nodes.length;j++) {
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<140) {
+        ctx.strokeStyle=`rgba(0,255,178,${(1-dist/140)*0.15})`;
+        ctx.lineWidth=0.5;
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x,nodes[i].y);
+        ctx.lineTo(nodes[j].x,nodes[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+  nodes.forEach(n => {
+    ctx.fillStyle='rgba(0,255,178,0.4)';
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+    ctx.fill();
+  });
+  requestAnimationFrame(drawNeural);
+}
+drawNeural();
+
+// ═══════════════════════════════════════
+// MATRIX RAIN
+// ═══════════════════════════════════════
+const rain = document.getElementById('rain-canvas');
+const rctx = rain.getContext('2d');
+let rW, rH, drops = [];
+const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ01010110VOSS0110LYRA';
+
+function initRain() {
+  rW = rain.width = window.innerWidth;
+  rH = rain.height = window.innerHeight;
+  const cols = Math.floor(rW / 16);
+  drops = Array(cols).fill(1);
+}
+initRain();
+window.addEventListener('resize', initRain, {passive:true});
+
+function drawRain() {
+  rctx.fillStyle = 'rgba(3,4,8,0.05)';
+  rctx.fillRect(0,0,rW,rH);
+  rctx.fillStyle = '#00FFB2';
+  rctx.font = '13px Share Tech Mono';
+  drops.forEach((y, i) => {
+    const c = CHARS[Math.floor(Math.random()*CHARS.length)];
+    rctx.fillStyle = i % 7 === 0 ? '#ffffff' : 'rgba(0,255,178,0.8)';
+    rctx.fillText(c, i*16, y*16);
+    if (y*16 > rH && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  });
+}
+setInterval(drawRain, 55);
+
+// ═══════════════════════════════════════
+// PARALLAX
+// ═══════════════════════════════════════
+window.addEventListener('scroll', () => {
+  const sy = window.scrollY;
+  document.querySelectorAll('.parallax-layer').forEach(el => {
+    const speed = parseFloat(el.dataset.speed || 0.1);
+    el.style.transform = `translateY(${sy * speed}px)`;
+  });
+}, {passive:true});
+
+// ═══════════════════════════════════════
+// ASCII PORTRAIT
+// ═══════════════════════════════════════
+const asciiArt = `
+     .:::::::::.
+   .::::::::::::::.
+  ::::::  :::  :::::
+ ::::  @@   @@ ::::
+ :::  (  . .  ) :::
+ :::   \\ _=_ /  :::
+  ::::  '---'  ::::
+   ::::::::::::::: 
+  ::::::::::::::::: 
+ ::::  /|   |\\  ::::
+ :::::|/ \\_/ \\|:::::
+ :::: |  VF   | ::::
+  :::::\\______/::::: 
+   ::::|      |::::
+    :: |  LV  | ::
+     : |  Ω   | :
+       |______|
+      /|      |\\
+     / |      | \\
+LV-Ω-0094 // VERIFIED
+`.trim();
+document.getElementById('ascii-portrait').textContent = asciiArt;
+
+// ═══════════════════════════════════════
+// RADAR CHART
+// ═══════════════════════════════════════
+const radarCanvas = document.getElementById('radar-canvas');
+const rc = radarCanvas.getContext('2d');
+const radarSkills = [
+  {label:'Neural Arch', value:0.98, color:'rgba(0,255,178,0.8)'},
+  {label:'Cortex Bridge', value:0.95, color:'rgba(0,212,255,0.8)'},
+  {label:'Synth Theory', value:0.91, color:'rgba(180,0,255,0.8)'},
+  {label:'Bio-Mesh', value:0.89, color:'rgba(255,180,0,0.8)'},
+  {label:'Empathy', value:0.84, color:'rgba(255,68,0,0.8)'},
+  {label:'Consensus', value:0.80, color:'rgba(255,0,170,0.8)'},
+];
+let radarAnim = 0;
+
+function drawRadar(progress) {
+  const CX = radarCanvas.width/2, CY = radarCanvas.height/2;
+  const R = Math.min(CX,CY) - 32;
+  const n = radarSkills.length;
+  rc.clearRect(0,0,radarCanvas.width,radarCanvas.height);
+
+  // Grid rings
+  for (let r=1;r<=5;r++) {
+    rc.beginPath();
+    for (let i=0;i<n;i++) {
+      const angle = (i/n)*Math.PI*2 - Math.PI/2;
+      const x = CX + Math.cos(angle)*(R*r/5);
+      const y = CY + Math.sin(angle)*(R*r/5);
+      if(i===0) rc.moveTo(x,y); else rc.lineTo(x,y);
+    }
+    rc.closePath();
+    rc.strokeStyle = 'rgba(0,255,178,0.1)';
+    rc.lineWidth = 1;
+    rc.stroke();
+  }
+
+  // Spokes
+  for (let i=0;i<n;i++) {
+    const angle = (i/n)*Math.PI*2 - Math.PI/2;
+    rc.beginPath();
+    rc.moveTo(CX,CY);
+    rc.lineTo(CX+Math.cos(angle)*R, CY+Math.sin(angle)*R);
+    rc.strokeStyle = 'rgba(0,255,178,0.12)';
+    rc.lineWidth = 1;
+    rc.stroke();
+    // Label
+    const lx = CX+Math.cos(angle)*(R+20);
+    const ly = CY+Math.sin(angle)*(R+20);
+    rc.fillStyle = 'rgba(200,232,216,0.5)';
+    rc.font = '9px Share Tech Mono';
+    rc.textAlign = 'center';
+    rc.textBaseline = 'middle';
+    rc.fillText(radarSkills[i].label.toUpperCase(), lx, ly);
+  }
+
+  // Fill
+  rc.beginPath();
+  for (let i=0;i<n;i++) {
+    const angle = (i/n)*Math.PI*2 - Math.PI/2;
+    const val = radarSkills[i].value * progress;
+    const x = CX + Math.cos(angle)*R*val;
+    const y = CY + Math.sin(angle)*R*val;
+    if(i===0) rc.moveTo(x,y); else rc.lineTo(x,y);
+  }
+  rc.closePath();
+  rc.fillStyle = 'rgba(0,255,178,0.08)';
+  rc.fill();
+  rc.strokeStyle = 'rgba(0,255,178,0.6)';
+  rc.lineWidth = 1.5;
+  rc.stroke();
+
+  // Points
+  radarSkills.forEach((s,i) => {
+    const angle = (i/n)*Math.PI*2 - Math.PI/2;
+    const val = s.value * progress;
+    const x = CX + Math.cos(angle)*R*val;
+    const y = CY + Math.sin(angle)*R*val;
+    rc.beginPath();
+    rc.arc(x,y,4,0,Math.PI*2);
+    rc.fillStyle = s.color;
+    rc.fill();
+  });
+
+  if (progress < 1) {
+    radarAnim += 0.025;
+    requestAnimationFrame(() => drawRadar(Math.min(1, radarAnim)));
+  }
+}
+// Start radar when in view
+const radarObs = new IntersectionObserver(entries => {
+  if(entries[0].isIntersecting) { radarAnim=0; drawRadar(0); radarObs.disconnect(); }
+}, {threshold:0.3});
+radarObs.observe(radarCanvas);
+
+// ═══════════════════════════════════════
+// TIMELINE ACCORDION
+// ═══════════════════════════════════════
+document.querySelectorAll('.timeline-header').forEach(header => {
+  header.addEventListener('click', () => {
+    const item = header.parentElement;
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.timeline-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+    beep(880, 0.06, 0.03);
+  });
+});
+
+// ═══════════════════════════════════════
+// TESTIMONIALS DECRYPT ANIMATION
+// ═══════════════════════════════════════
+const CHARS2 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*<>{}[]|';
+
+function animateDecrypt(card) {
+  const textEl = card.querySelector('.decrypt-chars');
+  const fullText = card.querySelector('.testimonial-text').dataset.text;
+  let frame = 0;
+  const totalFrames = fullText.length * 3;
+  function step() {
+    let result = '';
+    for (let i = 0; i < fullText.length; i++) {
+      if (i < frame/3) {
+        result += fullText[i];
+      } else if (fullText[i] === ' ') {
+        result += ' ';
+      } else {
+        result += CHARS2[Math.floor(Math.random()*CHARS2.length)];
+      }
+    }
+    textEl.textContent = result;
+    frame++;
+    if (frame <= totalFrames) requestAnimationFrame(step);
+    else textEl.textContent = fullText;
+  }
+  step();
+}
+
+// Generate noise text
+function makeNoise(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  let t = '';
+  for (let i=0;i<400;i++) t += CHARS2[Math.floor(Math.random()*CHARS2.length)];
+  el.textContent = t;
+}
+['noise-1','noise-2','noise-3'].forEach(makeNoise);
+
+const testimonialObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { animateDecrypt(e.target); testimonialObs.unobserve(e.target); }
+  });
+}, {threshold: 0.3});
+document.querySelectorAll('.testimonial-card').forEach(c => testimonialObs.observe(c));
+
+// ═══════════════════════════════════════
+// CONTACT FORM
+// ═══════════════════════════════════════
+const form = document.getElementById('contact-form');
+const submitBtn = document.getElementById('submit-btn');
+const submitLabel = document.getElementById('submit-label');
+const formStatus = document.getElementById('form-status');
+
+form.addEventListener('submit', () => {
+  submitBtn.classList.add('sending');
+  submitLabel.textContent = 'TRANSMITTING...';
+  formStatus.textContent = '// ENCODING NEURAL PACKET...';
+  beep(1100, 0.1, 0.05);
+  setTimeout(() => {
+    formStatus.textContent = '// ROUTING THROUGH MERIDIAN GRID...';
+    beep(880, 0.08, 0.04);
+  }, 900);
+  setTimeout(() => {
+    submitBtn.classList.remove('sending');
+    submitLabel.textContent = 'TRANSMITTED ✓';
+    formStatus.textContent = '// MESSAGE DELIVERED — UPLINK CONFIRMED';
+    beep(1320, 0.15, 0.06);
+    form.reset();
+    setTimeout(() => {
+      submitLabel.textContent = 'TRANSMIT MESSAGE';
+      formStatus.textContent = '';
+    }, 4000);
+  }, 2000);
+});
+
+// ═══════════════════════════════════════
+// DARK/LIGHT MODE
+// ═══════════════════════════════════════
+const modeBtn = document.getElementById('mode-toggle');
+let isLight = false;
+modeBtn.addEventListener('click', () => {
+  isLight = !isLight;
+  document.body.classList.toggle('light-mode', isLight);
+  modeBtn.textContent = isLight ? 'NEURAL: OFF' : 'NEURAL: ON';
+  beep(isLight ? 440 : 880, 0.1, 0.04);
+});
+
+// ═══════════════════════════════════════
+// SCROLL REVEAL
+// ═══════════════════════════════════════
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); }
+  });
+}, {threshold: 0.1});
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+// ACTIVE NAV
+const sections = document.querySelectorAll('main section[id]');
+const navLinks = document.querySelectorAll('nav a[href^="#"]');
+const navObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const active = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, {threshold: 0.4});
+sections.forEach(s => navObs.observe(s));
+
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({behavior:'smooth'});
+  });
+});
+
+// ═══════════════════════════════════════
+// SOUND
+// ═══════════════════════════════════════
+let soundOn = true;
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let actx;
+function getCtx() { if(!actx) actx = new AudioCtx(); return actx; }
+function beep(freq=880, dur=0.06, vol=0.04, type='sine') {
+  if(!soundOn) return;
+  try {
+    const ac = getCtx();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ac.currentTime);
+    gain.gain.setValueAtTime(vol, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+dur);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime+dur);
+  } catch(e) {}
+}
+document.querySelectorAll('nav a').forEach(a=>a.addEventListener('mouseenter',()=>beep(1200,0.04,0.03)));
+document.querySelectorAll('.project-card').forEach(c=>c.addEventListener('mouseenter',()=>beep(660,0.08,0.04)));
+document.querySelectorAll('.btn-primary,.btn-secondary,.btn-submit').forEach(b=>{
+  b.addEventListener('mouseenter',()=>beep(880,0.05,0.04,'triangle'));
+  b.addEventListener('click',()=>beep(1100,0.1,0.06));
+});
+document.querySelectorAll('.contact-link').forEach(l=>l.addEventListener('mouseenter',()=>beep(780,0.05,0.03)));
+const soundBtn = document.getElementById('sound-toggle');
+soundBtn.addEventListener('click',()=>{
+  soundOn=!soundOn;
+  soundBtn.textContent=soundOn?'♪':'○';
+  soundBtn.classList.toggle('muted',!soundOn);
+  if(soundOn) beep(1000,0.1,0.05);
+});
+
+// ═══════════════════════════════════════
+// KONAMI CODE + SNAKE GAME
+// ═══════════════════════════════════════
+const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let konamiIdx = 0;
+let snakeInterval = null;
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('konami-overlay').classList.contains('active')) return;
+  if (e.key === KONAMI[konamiIdx]) {
+    konamiIdx++;
+    if (konamiIdx === KONAMI.length) { konamiIdx=0; activateKonami(); }
+  } else { konamiIdx = 0; }
+});
+
+function activateKonami() {
+  document.getElementById('konami-overlay').classList.add('active');
+  beep(1320,0.3,0.08,'square');
+  setTimeout(()=>beep(1760,0.3,0.08,'square'),200);
+  startSnake();
+}
+document.getElementById('konami-close').addEventListener('click', () => {
+  document.getElementById('konami-overlay').classList.remove('active');
+  if (snakeInterval) clearInterval(snakeInterval);
+});
+
+function startSnake() {
+  const sc = document.getElementById('snake-canvas');
+  const sctx = sc.getContext('2d');
+  const CELL = 20, COLS = sc.width/CELL, ROWS = sc.height/CELL;
+  let snake = [{x:10,y:7}], dir={x:1,y:0}, nextDir={x:1,y:0};
+  let food = randomFood();
+  let score = 0;
+  let alive = true;
+
+  function randomFood() {
+    return {x:Math.floor(Math.random()*COLS),y:Math.floor(Math.random()*ROWS)};
+  }
+
+  document.addEventListener('keydown', handleSnakeKey);
+  function handleSnakeKey(e) {
+    if (!document.getElementById('konami-overlay').classList.contains('active')) return;
+    if (e.key==='ArrowUp'&&dir.y!==1) nextDir={x:0,y:-1};
+    if (e.key==='ArrowDown'&&dir.y!==-1) nextDir={x:0,y:1};
+    if (e.key==='ArrowLeft'&&dir.x!==1) nextDir={x:-1,y:0};
+    if (e.key==='ArrowRight'&&dir.x!==-1) nextDir={x:1,y:0};
+    e.preventDefault();
+  }
+
+  if (snakeInterval) clearInterval(snakeInterval);
+  snakeInterval = setInterval(() => {
+    if (!alive) return;
+    dir = nextDir;
+    const head = {x:(snake[0].x+dir.x+COLS)%COLS, y:(snake[0].y+dir.y+ROWS)%ROWS};
+    if (snake.some(s=>s.x===head.x&&s.y===head.y)) { alive=false; return; }
+    snake.unshift(head);
+    if (head.x===food.x&&head.y===food.y) {
+      score++;
+      document.getElementById('snake-score').textContent=score;
+      food=randomFood();
+      beep(1100,0.05,0.04);
+    } else { snake.pop(); }
+
+    sctx.fillStyle='rgba(3,4,8,0.95)'; sctx.fillRect(0,0,sc.width,sc.height);
+    // Grid
+    sctx.strokeStyle='rgba(0,255,178,0.05)'; sctx.lineWidth=0.5;
+    for(let x=0;x<COLS;x++){sctx.beginPath();sctx.moveTo(x*CELL,0);sctx.lineTo(x*CELL,sc.height);sctx.stroke();}
+    for(let y=0;y<ROWS;y++){sctx.beginPath();sctx.moveTo(0,y*CELL);sctx.lineTo(sc.width,y*CELL);sctx.stroke();}
+    // Snake
+    snake.forEach((s,i)=>{
+      sctx.fillStyle=i===0?'#00FFB2':'rgba(0,255,178,0.5)';
+      sctx.fillRect(s.x*CELL+1,s.y*CELL+1,CELL-2,CELL-2);
+    });
+    // Food
+    sctx.fillStyle='#FF003C';
+    sctx.fillRect(food.x*CELL+2,food.y*CELL+2,CELL-4,CELL-4);
+
+    if(!alive) {
+      sctx.fillStyle='rgba(0,255,178,0.8)';
+      sctx.font='20px Orbitron';
+      sctx.textAlign='center';
+      sctx.fillText('CORTEX CRASH',sc.width/2,sc.height/2);
+      sctx.font='12px Share Tech Mono';
+      sctx.fillText('PRESS ESC TO EXIT',sc.width/2,sc.height/2+30);
+    }
+  }, 140);
+}
+</script>
+</body>
+</html>
